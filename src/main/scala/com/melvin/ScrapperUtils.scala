@@ -9,6 +9,12 @@ import scala.util.{Failure, Success, Try}
 object ScrapperUtils {
   private var iter = 0
   private var totalProductsFound = 0
+
+  /**
+   * Fetches a search document from a given search url
+   * @param url The search results URL from which we get a list of product documents
+   * @return document of searched products
+   */
   def fetchPage(url: String): Option[Document] = {
     //Fetch HTML content of the page
     Try(Jsoup.connect(url)
@@ -22,6 +28,12 @@ object ScrapperUtils {
     }
   }
 
+
+  /**
+   * Extracts product links from a search document
+   * @param doc the document from which we can extract product links
+   * @return Sequence of product links
+   */
   def extractProductLinks(doc: Document): Seq[String] = {
     // Extract product links from the search results page
     val productLinks = doc.select("a.a-link-normal.s-no-outline")
@@ -35,6 +47,11 @@ object ScrapperUtils {
     productLinks
   }
 
+  /**
+   * Extracts data from a given url
+   * @param url the product url from which we can scrape the data
+   * @return Map of product data in key value pair
+   */
   def extractProductData(url: String): Option[Map[String, String]] = { //Option[Map[String, String]]
     // Fetch and scrape each product page
     fetchPage(url) match {
@@ -60,11 +77,6 @@ object ScrapperUtils {
           "url" -> url
         )
 
-         // Print non-empty product details in a concise format
-//        fullInfo.foreach { case (key, value) =>
-//          if (value.nonEmpty) println(s"$key: $value")
-//        }
-
         iter+=1
         // Return the resulting list
         Some(fullInfo)
@@ -75,14 +87,20 @@ object ScrapperUtils {
     }
   }
 
-  def writeToCSV(fileName: String, data: Seq[Map[String, String]], separator: String): Unit = {
+  /**
+   * Writes the data to a csv file (can use custom delimiter)
+   * @param fileName path of the output file to which data will be written
+   * @param data data to be written
+   * @param separator separator or delimiter to use while writing data
+   * @param headersList List of headers to be included in the output
+   */
+  def writeToCSV(fileName: String, data: Seq[Map[String, String]], separator: String, headersList: List[String]): Unit = {
     val writer = new PrintWriter(new File(fileName))
 
     try{
       // Extract headers from the first Map
       //val headers = data.flatMap(_.keys).distinct
-      val headers = List("title","price","bestSeller","stars","reviews","socialProof","soldBy","isAmazonChoice","freeDelivery","availability","boxContents","productDescription",
-        "features","ratingsHistogram","url")
+      val headers = headersList
 
       // Write headers
       writer.println(s"sep=$separator\n" + headers.mkString(separator))
