@@ -50,6 +50,13 @@
       <artifactId>core_2.12</artifactId>
       <version>3.9.7</version>
     </dependency>
+    <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.3.4</version>
+    </dependency>
+
 
 
     <!-- https://mvnrepository.com/artifact/org.jsoup/jsoup -->

@@ -1,14 +1,26 @@
 package com.melvin
 
-import org.jsoup.Jsoup
+import org.jsoup.{Connection, Jsoup}
 import org.jsoup.nodes.Document
+
 import java.io.{File, PrintWriter}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
-import scala.util.{Failure, Success, Try}
+import scala.io.Source
+import scala.util.{Failure, Random, Success, Try}
 
 object ScrapperUtils {
   private var iter = 0
   private var totalProductsFound = 0
+  private val userAgentList = List(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.37",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.35 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.35",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.37 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.37",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.38 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.38",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.39 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.39"
+  )
+
+  private val proxyIPaddresses: List[String] = readIPAddresses("C:\\Users\\mines\\workspace\\projects\\training\\amazon-web-scraper\\src\\main\\resources\\ipaddress.txt")
 
   /**
    * Fetches a search document from a given search url
@@ -16,14 +28,35 @@ object ScrapperUtils {
    * @return document of searched products
    */
   def fetchPage(url: String): Option[Document] = {
+    val proxy: String = proxyIPaddresses(Random.nextInt(proxyIPaddresses.length)) // Randomly pick a proxy
+    val proxyParts = proxy.split(":")
+    val proxyHost = proxyParts(0)
+    val proxyPort = proxyParts(1).toInt
+
+    //Random user agent
+    val randomUserAgent = userAgentList(scala.util.Random.nextInt(userAgentList.size))
     //Fetch HTML content of the page
     Try(Jsoup.connect(url)
-      .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.37")
-      .timeout(5000)
+      .userAgent(randomUserAgent)
+      .proxy(proxyHost, proxyPort) // Set the proxy
+      .timeout(3000)
+      .ignoreContentType(true)
       .get()) match {
       case Success(doc) => Some(doc)
       case Failure(exception) =>
         println(s"Error fetching the page: ${exception.getMessage}")
+        exception match {
+          case e: java.net.SocketTimeoutException =>
+            println(s"Timeout when fetching the page using proxy: $proxyHost:$proxyPort" + e)
+          case e: java.net.UnknownHostException =>
+            println(s"Unknown host for proxy: $proxyHost:$proxyPort" + e)
+          case e: java.net.ConnectException =>
+            println(s"Failed to connect using proxy: $proxyHost:$proxyPort" + e)
+          case e: org.jsoup.HttpStatusException =>
+            println(s"HTTP error: ${e.getStatusCode} for proxy: $proxyHost:$proxyPort")
+          case _ =>
+            println(s"Error fetching the page using proxy $proxyHost:$proxyPort: ${exception.getMessage}")
+        }
         None
     }
   }
@@ -116,5 +149,24 @@ object ScrapperUtils {
       writer.close()
     }
     println(s"Data written to $fileName")
+  }
+
+  def readIPAddresses(filePath: String): List[String] = {
+    val bufferedSource = Source.fromFile(filePath)
+    val ipList = bufferedSource.getLines().toList // Read each line and store in a list
+    bufferedSource.close() // Close the file after reading
+    ipList
+  }
+
+  def openConnection(url: String, proxy: String): Connection = {
+    // Set up a new connection with the desired proxy and other settings
+    val proxyParts = proxy.split(":")
+    val proxyHost = proxyParts(0)
+    val proxyPort = proxyParts(1).toInt
+
+    val connection = Jsoup.connect(url)
+      .proxy(proxyHost, proxyPort)
+      .timeout(5000)
+    connection
   }
 }
